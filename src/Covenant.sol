@@ -96,7 +96,10 @@ contract Covenant is SomniaEventHandler, IAgentConsumer {
     uint256 public nextAgreementId = 1;
     mapping(uint256 => Agreement) private _agreements;
 
-    /// @dev Scheduled-wake routing: millisecond timestamp -> packed (agreementId, milestoneIndex)+1.
+    /// @dev Scheduled-wake routing: SECOND timestamp -> packed (agreementId, milestoneIndex)+1.
+    ///      Keyed by seconds, not milliseconds: the chain dispatches Schedule wakes with the actual
+    ///      tick time in topic[1] (observed ~25ms after the requested ms), so exact-ms routing misses.
+    ///      We always arm at second-boundary+1ms, so requested and dispatched times share a second.
     mapping(uint256 => uint256) private _checkAt;
     /// @dev In-flight agent request -> packed (agreementId, milestoneIndex)+1.
     mapping(uint256 => uint256) private _requestCtx;
@@ -219,10 +222,10 @@ contract Covenant is SomniaEventHandler, IAgentConsumer {
         if (eventTopics.length < 2) return;
         if (eventTopics[0] != ISomniaReactivityPrecompile.Schedule.selector) return;
 
-        uint256 ts = uint256(eventTopics[1]);
-        uint256 packed = _checkAt[ts];
+        uint256 tsSec = uint256(eventTopics[1]) / 1000; // dispatch carries the actual tick ms
+        uint256 packed = _checkAt[tsSec];
         if (packed == 0) return; // already handled or unknown timestamp
-        delete _checkAt[ts];
+        delete _checkAt[tsSec];
 
         (uint256 agreementId, uint256 mIdx) = _unpack(packed);
         _fireCheck(agreementId, mIdx);
@@ -406,13 +409,12 @@ contract Covenant is SomniaEventHandler, IAgentConsumer {
         if (whenSec <= block.timestamp) whenSec = block.timestamp + 1;
         if (whenSec > m.deadline) whenSec = uint256(m.deadline) + 1; // final wake to trigger refund
 
-        // Millisecond timestamp with margin over the precompile's "future" guard.
+        // Routing is second-granular (see _checkAt); keep each routed second unique, and arm the
+        // wake at second-boundary+1ms so the chain's actual tick lands inside the same second.
+        while (_checkAt[whenSec] != 0) whenSec++;
         uint256 whenMs = whenSec * 1000 + 1;
-        uint256 floor = (block.timestamp + 1) * 1000 + 1;
-        if (whenMs < floor) whenMs = floor;
-        while (_checkAt[whenMs] != 0) whenMs++; // keep each routed timestamp unique
 
-        _checkAt[whenMs] = _pack(agreementId, mIdx);
+        _checkAt[whenSec] = _pack(agreementId, mIdx);
         m.armedMs = uint64(whenMs);
         SomniaExtensions.scheduleSubscriptionAtTimestamp(
             address(this), whenMs, SomniaExtensions.defaultSubscriptionOptions()
@@ -428,6 +430,16 @@ contract Covenant is SomniaEventHandler, IAgentConsumer {
         _scheduleCheck(agreementId, mIdx);
     }
 
+    /// @notice Permissionless recovery: refund a milestone whose deadline passed while still
+    ///         Pending (e.g. its wake was lost). Mirrors the autonomous deadline refund exactly;
+    ///         it cannot fire early and pays the same party the contract would have paid.
+    function reclaimExpired(uint256 agreementId, uint256 mIdx) external {
+        Milestone storage m = _agreements[agreementId].milestones[mIdx];
+        if (m.state != MilestoneState.Pending || block.timestamp < m.deadline) revert NotArmable();
+        m.armedMs = 0;
+        _refund(agreementId, mIdx);
+    }
+
     // ---------------------------------------------------------------------
     // Owner: buffer management + config
     // ---------------------------------------------------------------------
@@ -440,6 +452,14 @@ contract Covenant is SomniaEventHandler, IAgentConsumer {
         uint256 floor = SomniaExtensions.SUBSCRIPTION_OWNER_MINIMUM_BALANCE + GAS_BUFFER;
         require(freeBalance() >= amount + floor, "would breach buffer");
         _payout(owner, amount);
+    }
+
+    /// @notice Decommission the singleton: recover the entire buffer once no escrow is live.
+    ///         Owner-only and blocked while any agreement holds unsettled escrow, so it can never
+    ///         touch user funds — it only frees the owner's own 32-STT floor for redeployment.
+    function shutdown() external onlyOwner {
+        require(reservedEscrow == 0, "live escrow");
+        _payout(owner, address(this).balance);
     }
 
     function setParseAgentId(uint256 id) external onlyOwner {

@@ -354,6 +354,71 @@ contract CovenantTest is Test {
         assertEq(o.balance, before + 7 ether);
     }
 
+    // ------------------------------------------------- dispatch-time routing
+
+    /// @dev Regression: the chain dispatches Schedule wakes with the ACTUAL tick ms (observed
+    ///      ~25ms after the requested second-boundary+1ms). Routing must still find the check.
+    function test_wakeRoutesDespiteDispatchMsOffset() public {
+        uint256 id = _create();
+        _wake(_whenMs(checkAt) + 25); // actual tick lands later within the same second
+        assertEq(uint256(covenant.getMilestone(id, 0).state), uint256(Covenant.MilestoneState.Checking));
+        assertEq(platform.lastValue(), covenant.perValidatorFee() * 3);
+    }
+
+    // ------------------------------------------------------ reclaimExpired
+
+    function test_reclaimExpiredRefundsFunder() public {
+        uint256 id = _create();
+        vm.warp(deadline); // wake was lost; deadline reached with milestone still Pending
+        uint256 before = funder.balance;
+        covenant.reclaimExpired(id, 0);
+        assertEq(uint256(covenant.getMilestone(id, 0).state), uint256(Covenant.MilestoneState.Refunded));
+        assertEq(funder.balance, before + payout);
+        assertEq(covenant.reservedEscrow(), 0);
+    }
+
+    function test_reclaimExpiredRevertsBeforeDeadline() public {
+        uint256 id = _create();
+        vm.expectRevert(Covenant.NotArmable.selector);
+        covenant.reclaimExpired(id, 0);
+    }
+
+    function test_reclaimExpiredRevertsOnceSettled() public {
+        uint256 id = _create();
+        vm.warp(deadline);
+        covenant.reclaimExpired(id, 0);
+        vm.expectRevert(Covenant.NotArmable.selector);
+        covenant.reclaimExpired(id, 0);
+    }
+
+    // ------------------------------------------------------------ shutdown
+
+    function test_shutdownRevertsWithLiveEscrow() public {
+        _create();
+        vm.prank(covenant.owner());
+        vm.expectRevert("live escrow");
+        covenant.shutdown();
+    }
+
+    function test_shutdownRecoversFullBufferWhenEscrowClear() public {
+        uint256 id = _create();
+        vm.warp(deadline);
+        covenant.reclaimExpired(id, 0); // settle the only milestone
+        address o = covenant.owner();
+        uint256 contractBal = address(covenant).balance;
+        uint256 before = o.balance;
+        vm.prank(o);
+        covenant.shutdown();
+        assertEq(o.balance, before + contractBal);
+        assertEq(address(covenant).balance, 0);
+    }
+
+    function test_shutdownOnlyOwner() public {
+        vm.prank(funder);
+        vm.expectRevert(Covenant.NotOwner.selector);
+        covenant.shutdown();
+    }
+
     /// @dev The owner here is this test contract; accept its withdrawal.
     receive() external payable {}
 }
