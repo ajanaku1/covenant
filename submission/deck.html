@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; }
+  .slide {
+    width: 1280px; height: 720px; page-break-after: always; position: relative;
+    background: #0a0a14; color: #f2f1f8; overflow: hidden; padding: 70px 90px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .orb { position: absolute; border-radius: 50%; filter: blur(90px); }
+  .o1 { width: 420px; height: 420px; background: #5b51e8; opacity: .14; top: -120px; left: -100px; }
+  .o2 { width: 360px; height: 360px; background: #14b8a6; opacity: .10; bottom: -140px; right: -80px; }
+  .kicker { font-size: 15px; letter-spacing: 4px; color: #8b83f4; font-weight: 700; margin-bottom: 18px; text-transform: uppercase; }
+  h1 { font-size: 64px; font-weight: 900; line-height: 1.08; }
+  h2 { font-size: 44px; font-weight: 800; margin-bottom: 30px; line-height: 1.15; }
+  .grad { background: linear-gradient(135deg, #8b83f4, #5b51e8, #14b8a6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  p, li { font-size: 23px; line-height: 1.5; color: #c9c7d8; }
+  .sub { font-size: 27px; color: #aaa7bd; margin-top: 22px; max-width: 950px; }
+  ul { list-style: none; }
+  li { margin-bottom: 16px; padding-left: 30px; position: relative; }
+  li:before { content: "—"; position: absolute; left: 0; color: #5b51e8; font-weight: 700; }
+  .mono { font-family: "SF Mono", Menlo, monospace; font-size: 18px; color: #8b83f4; }
+  .quote { font-size: 30px; font-style: italic; color: #f2f1f8; border-left: 4px solid #5b51e8; padding-left: 28px; max-width: 980px; line-height: 1.45; }
+  .cards { display: flex; gap: 22px; margin-top: 36px; }
+  .card { flex: 1; background: rgba(22,21,38,.85); border: 1px solid rgba(91,81,232,.3); border-radius: 14px; padding: 26px 24px; }
+  .card .t { font-family: Menlo, monospace; font-size: 15px; letter-spacing: 3px; font-weight: 700; margin-bottom: 12px; }
+  .card p { font-size: 18px; }
+  .stat { font-size: 56px; font-weight: 900; color: #8b83f4; font-family: Menlo, monospace; }
+  .statk { font-size: 17px; color: #5e5b72; margin-top: 4px; }
+  .row { display: flex; gap: 70px; margin-top: 38px; }
+  .foot { position: absolute; bottom: 36px; left: 90px; font-size: 15px; color: #5e5b72; font-family: Menlo, monospace; }
+  table { border-collapse: collapse; margin-top: 10px; }
+  td { font-size: 19px; padding: 10px 26px 10px 0; color: #c9c7d8; vertical-align: top; }
+  td:first-child { color: #5e5b72; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<!-- 1 · Cover -->
+<div class="slide" style="align-items:center; text-align:center;">
+  <div class="orb o1"></div><div class="orb o2"></div>
+  <h1 class="grad" style="font-size:96px; letter-spacing:4px;">COVENANT</h1>
+  <p class="sub" style="margin-top:14px; font-size:30px;">Agreements that read the world and pay themselves.</p>
+  <p style="margin-top:46px; font-size:20px; color:#5e5b72;">Somnia Agentathon · covenant-beta.vercel.app · github.com/ajanaku1/covenant</p>
+</div>
+
+<!-- 2 · Problem -->
+<div class="slide">
+  <div class="orb o1"></div>
+  <div class="kicker">The problem</div>
+  <h2>Real deals are written in English.<br>Contracts can't read.</h2>
+  <ul style="max-width:1000px;">
+    <li>"Pay the freelancer when the site is live" has to be translated into brittle Solidity before a chain can enforce it.</li>
+    <li>Then it needs an oracle to describe reality and a keeper or cron job to poke it forever.</li>
+    <li>Every one of those is a middleman in a deal that was supposed to be trustless.</li>
+  </ul>
+</div>
+
+<!-- 3 · Solution -->
+<div class="slide">
+  <div class="orb o2"></div>
+  <div class="kicker">The idea</div>
+  <h2>Keep the clause in English.<br>Make the judge a validator panel.</h2>
+  <p class="quote">"Pay the freelancer 200 USDC when the site at &lt;url&gt; is live and mentions Somnia. Check daily for 7 days. Refund me if it isn't met by the deadline."</p>
+  <p class="sub">You fund it once. That is the last transaction anyone sends. The contract does the rest itself.</p>
+</div>
+
+<!-- 4 · How it works -->
+<div class="slide">
+  <div class="orb o1"></div>
+  <div class="kicker">How it works</div>
+  <h2>One loop: Wake → Perceive → Judge → Act</h2>
+  <div class="cards">
+    <div class="card"><div class="t" style="color:#8b83f4;">WAKE</div><p>The contract schedules its own wake-ups with Somnia's reactivity layer. The chain calls it at check time.</p></div>
+    <div class="card"><div class="t" style="color:#22d3ee;">PERCEIVE</div><p>It sends the real evidence (the live website) to Somnia's LLM Parse Website agent.</p></div>
+    <div class="card"><div class="t" style="color:#f59e0b;">JUDGE</div><p>A validator subcommittee each scores the English clause 0–100. The contract takes the median.</p></div>
+    <div class="card"><div class="t" style="color:#14b8a6;">ACT</div><p>Score ≥ threshold: escrow released. Past deadline unmet: funder refunded. Then re-arm.</p></div>
+  </div>
+  <p style="margin-top:30px; font-size:19px; color:#5e5b72;">No single judge can swing a payout. Every ruling links to a public per-validator receipt.</p>
+</div>
+
+<!-- 5 · Built on Somnia -->
+<div class="slide">
+  <div class="orb o2"></div>
+  <div class="kicker">Deep Somnia integration</div>
+  <h2>Two primitives, used together</h2>
+  <table>
+    <tr><td>Reactivity</td><td>scheduleSubscriptionAtTimestamp (precompile 0x0100) — the contract is its own keeper. One singleton owns every schedule above a single 32 STT balance floor, never 32 per agreement.</td></tr>
+    <tr><td>Agent platform</td><td>createAdvancedRequest to the LLM Parse Website agent over a threshold-consensus subcommittee; handleResponse aggregates the median and settles.</td></tr>
+    <tr><td>Escrow safety</td><td>reservedEscrow walls agreement funds off from gas and agent fees. Callbacks gate on msg.sender and handle every ResponseStatus.</td></tr>
+    <tr><td>Self-healing</td><td>A thin buffer defers a re-arm instead of reverting a payout; permissionless poke and reclaimExpired recover anything the chain drops.</td></tr>
+  </table>
+</div>
+
+<!-- 6 · Proof -->
+<div class="slide">
+  <div class="orb o1"></div>
+  <div class="kicker">Proven on testnet, not promised</div>
+  <h2>The receipts are public</h2>
+  <ul style="max-width:1050px;">
+    <li>3-validator consensus judgment resolved on-chain, median-aggregated — receipt <span class="mono">agents.testnet.somnia.network/receipts/5358074</span></li>
+    <li>The chain autonomously woke the contract at the exact scheduled second, in a transaction nobody sent — <span class="mono">0x2c4e0e06…</span></li>
+    <li>Covenant singleton live at <span class="mono">0x152432d1B863C0A0645D86452a23F9C16077C28A</span> (chain 50312)</li>
+    <li>32 Foundry tests: escrow math, callback discipline, refunds, deferred re-arms, recovery paths.</li>
+  </ul>
+  <div class="row">
+    <div><div class="stat">0</div><div class="statk">transactions after funding</div></div>
+    <div><div class="stat">1</div><div class="statk">singleton, every agreement</div></div>
+    <div><div class="stat">3</div><div class="statk">validators per judgment</div></div>
+  </div>
+</div>
+
+<!-- 7 · Beyond the demo -->
+<div class="slide">
+  <div class="orb o2"></div>
+  <div class="kicker">Where this goes</div>
+  <h2>The freelance clause is the showcase.<br>The engine is general.</h2>
+  <ul style="max-width:1000px;">
+    <li>KPI-gated vesting: "unlock the grant when the dashboard shows 10k users."</li>
+    <li>Vendor SLAs: "refund 5% for every day the status page shows an outage."</li>
+    <li>Real-world settlement of any deal a person can phrase in a sentence and point at evidence.</li>
+  </ul>
+  <p class="sub">Anything an LLM panel can read becomes an enforceable condition.</p>
+</div>
+
+<!-- 8 · Close -->
+<div class="slide" style="align-items:center; text-align:center;">
+  <div class="orb o1"></div><div class="orb o2"></div>
+  <h1 class="grad" style="font-size:72px;">Write a deal in a sentence.<br>Walk away.</h1>
+  <p style="margin-top:44px; font-size:24px;" class="mono">covenant-beta.vercel.app</p>
+  <p style="margin-top:10px; font-size:20px;" class="mono">github.com/ajanaku1/covenant</p>
+  <p style="margin-top:42px; font-size:17px; color:#5e5b72;">Built for the Somnia Agentathon</p>
+</div>
+
+</body>
+</html>
