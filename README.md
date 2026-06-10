@@ -152,7 +152,7 @@ The UI: write an agreement in English → confirm the extracted scaffold (partie
 
 | Network | Contract | Address |
 |---|---|---|
-| Somnia Testnet (50312) | Covenant | _deploy via `script/Deploy.s.sol`, then record here_ |
+| Somnia Testnet (50312) | Covenant | [`0x152432d1B863C0A0645D86452a23F9C16077C28A`](https://shannon-explorer.somnia.network/address/0x152432d1B863C0A0645D86452a23F9C16077C28A) |
 | Somnia Testnet | Agent platform | `0x037Bb9C718F3f7fe5eCBDB0b600D607b52706776` |
 | Somnia Testnet | LLM Parse Website agent | `12875401142070969085` |
 
