@@ -15,3 +15,4 @@ tsconfig.tsbuildinfo
 # Local
 .claude/
 prompt.md
+rec/
