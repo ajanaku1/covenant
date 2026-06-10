@@ -10,6 +10,11 @@ Escrow a plain-English deal once. The contract wakes itself, reads the evidence,
 
 ![Covenant landing](docs/images/landing.png)
 
+## Live Demo
+
+**[covenant-beta.vercel.app](https://covenant-beta.vercel.app)**
+Write an agreement in English, confirm the extracted scaffold, and watch the bundled demo agreement enforce itself.
+
 ---
 
 ## What Is Covenant?
