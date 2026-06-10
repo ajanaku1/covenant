@@ -354,6 +354,39 @@ contract CovenantTest is Test {
         assertEq(o.balance, before + 7 ether);
     }
 
+    // --------------------------------------------------- immediate-fire path
+
+    /// @dev A check that is already due fires its consensus request inside the funding tx —
+    ///      the agent leg alone settles it, with no reactivity floor required.
+    function test_createWithDueCheckFiresImmediately() public {
+        Covenant.MilestoneInput[] memory ms = _oneMilestone();
+        ms[0].checkAt = uint64(block.timestamp); // due now
+        vm.prank(funder);
+        uint256 id = covenant.createAgreement{value: payout}(payee, ms);
+        assertEq(uint256(covenant.getMilestone(id, 0).state), uint256(Covenant.MilestoneState.Checking));
+        assertEq(platform.lastValue(), covenant.perValidatorFee() * 3);
+    }
+
+    /// @dev The immediate-fire path works on a small buffer (fee + GAS_BUFFER), well below the
+    ///      32-STT scheduling floor — and the verdict still releases the escrow to the payee.
+    function test_smallBufferImmediateCheckSettles() public {
+        vm.deal(address(covenant), 1 ether); // far below the 32-STT floor
+        Covenant.MilestoneInput[] memory ms = _oneMilestone();
+        ms[0].checkAt = uint64(block.timestamp);
+        vm.prank(funder);
+        uint256 id = covenant.createAgreement{value: payout}(payee, ms);
+        assertEq(uint256(covenant.getMilestone(id, 0).state), uint256(Covenant.MilestoneState.Checking));
+
+        Response[] memory rs = new Response[](3);
+        rs[0] = _resp(84, ResponseStatus.Success);
+        rs[1] = _resp(86, ResponseStatus.Success);
+        rs[2] = _resp(91, ResponseStatus.Success);
+        uint256 before = payee.balance;
+        platform.deliver(covenant, 1, rs, ResponseStatus.Success);
+        assertEq(uint256(covenant.getMilestone(id, 0).state), uint256(Covenant.MilestoneState.Met));
+        assertEq(payee.balance, before + payout);
+    }
+
     // ------------------------------------------------- dispatch-time routing
 
     /// @dev Regression: the chain dispatches Schedule wakes with the ACTUAL tick ms (observed

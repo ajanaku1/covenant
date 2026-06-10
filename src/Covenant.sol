@@ -85,8 +85,8 @@ contract Covenant is SomniaEventHandler, IAgentConsumer {
     uint256 public perValidatorFee = 0.1 ether;
     /// @notice Per-request agent timeout in seconds (owner-tunable; 0 reverts InvalidTimeout on-chain).
     uint256 public requestTimeout = 120;
-    /// @notice Headroom kept above the 32-STT floor so reactive ticks never touch escrow.
-    uint256 public constant GAS_BUFFER = 1 ether;
+    /// @notice Gas/fee headroom that must stay free so reactive ticks and agent fees never touch escrow.
+    uint256 public constant GAS_BUFFER = 0.2 ether;
     /// @notice Upper bound on milestones per agreement (bounds the create loop and the index packing).
     uint256 public constant MAX_MILESTONES = 64;
 
@@ -202,13 +202,19 @@ contract Covenant is SomniaEventHandler, IAgentConsumer {
         }
 
         reservedEscrow += total;
-        // Escrow just landed as msg.value; require the buffer survives it.
-        if (freeBalance() < SomniaExtensions.SUBSCRIPTION_OWNER_MINIMUM_BALANCE + GAS_BUFFER) {
-            revert BufferTooLow();
-        }
+        // Escrow just landed as msg.value; it must never end up subsidizing gas or agent fees.
+        if (freeBalance() < GAS_BUFFER) revert BufferTooLow();
 
         emit AgreementCreated(agreementId, msg.sender, payee, total);
-        _scheduleCheck(agreementId, 0);
+
+        // A check that is already due fires inside the funding transaction itself (agent leg only —
+        // no owner floor needed). Future checks self-schedule via the reactivity layer, which
+        // requires the 32-STT subscription-owner floor at scheduling time and defers below it.
+        if (a.milestones[0].nextCheckAt <= block.timestamp) {
+            _fireCheck(agreementId, 0);
+        } else {
+            _scheduleCheck(agreementId, 0);
+        }
     }
 
     // ---------------------------------------------------------------------
