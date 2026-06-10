@@ -1,0 +1,17 @@
+node_modules/
+lib/
+out/
+cache/
+broadcast/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+.next/
+.vercel
+tsconfig.tsbuildinfo
+
+# Local
+.claude/
+prompt.md
